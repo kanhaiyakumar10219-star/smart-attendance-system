@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Teacher Attendance — Smart Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Teacher Attendance</div>
+  <div class="page-sub">Admin teacher attendance module. Student QR/OTP attendance is handled from Teacher > Mark Attendance.</div>
+</div>
+
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+
+<div class="grid-2 mb-6">
+  <div class="card">
+    <div class="card-title">Generate New QR / OTP Session</div>
+    <form method="POST">
+      <div class="form-group">
+        <label>Valid For (Minutes)</label>
+        <input type="text" name="expires_minutes" value="30" required>
+      </div>
+      <button class="btn btn-primary" type="submit">Generate Teacher Attendance QR/OTP</button>
+    </form>
+
+    {% if latest %}
+    <div class="mt-4">
+      <label>Latest OTP</label>
+      <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:var(--accent2);">{{ latest.otp }}</div>
+      <p style="color:var(--muted);font-size:13px;margin-top:6px;">Teacher self-attendance is disabled in this version.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Latest QR Code</div>
+    {% if qr_image %}
+      <div style="text-align:center;">
+        <img src="data:image/png;base64,{{ qr_image }}" alt="Teacher Attendance QR" style="width:230px;height:230px;background:#fff;border-radius:12px;padding:8px;">
+        <p style="font-size:12px;color:var(--muted);margin-top:10px;word-break:break-all;">{{ mark_url }}</p>
+      </div>
+    {% else %}
+      <p style="color:var(--muted);">No active QR session. Generate a new session first.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2 mb-6">
+  <div class="card">
+    <div class="card-title">Recent QR/OTP Sessions</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>OTP</th><th>Status</th><th>Expires</th><th>Marked</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td>#{{ s.id }}</td>
+            <td><strong>{{ s.otp }}</strong></td>
+            <td><span class="badge {% if s.status == 'active' %}badge-present{% else %}badge-absent{% endif %}">{{ s.status }}</span></td>
+            <td>{{ s.expires_at }}</td>
+            <td>{{ s.marked_count }}</td>
+            <td>
+              {% if s.status == 'active' %}
+              <form method="POST" action="/admin/teacher-attendance/close/{{ s.id }}" onsubmit="return confirm('Close this session?')">
+                <button class="btn btn-danger btn-sm">Close</button>
+              </form>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Teacher Attendance Records</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Teacher</th><th>Date</th><th>Status</th><th>Method</th><th>Marked At</th></tr></thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td><strong>{{ r.full_name }}</strong><br><span style="color:var(--muted);font-size:12px;">{{ r.username }}</span></td>
+            <td>{{ r.date }}</td>
+            <td><span class="badge badge-present">{{ r.status }}</span></td>
+            <td>{{ r.method|upper }}</td>
+            <td>{{ r.marked_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

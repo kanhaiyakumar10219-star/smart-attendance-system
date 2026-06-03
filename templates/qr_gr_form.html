@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Attendance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{
+      background:#0d0f14;
+      color:white;
+      font-family:Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+    }
+    .card{
+      background:#161921;
+      padding:30px;
+      border-radius:18px;
+      width:90%;
+      max-width:380px;
+      text-align:center;
+      border:1px solid #2a2f42;
+    }
+    input{
+      width:100%;
+      padding:14px;
+      margin:18px 0;
+      border-radius:10px;
+      border:1px solid #333;
+      background:#202331;
+      color:white;
+      font-size:16px;
+    }
+    button{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:10px;
+      background:#6366f1;
+      color:white;
+      font-size:16px;
+      font-weight:bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>QR Attendance</h2>
+    <p>Apna GR Number enter karo</p>
+
+    <form method="POST">
+      <input type="text" name="gr_no" placeholder="Enter GR Number" required>
+      <button type="submit">Mark Attendance</button>
+    </form>
+  </div>
+</body>
+</html>

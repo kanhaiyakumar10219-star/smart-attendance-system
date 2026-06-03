@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Reports — Smart Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">📊 Attendance Reports</div>
+  <div class="page-sub">Analyse and export student attendance data</div>
+</div>
+
+<div class="card mb-6">
+  <form method="GET" action="/teacher/reports" class="flex gap-3 items-center flex-wrap">
+    <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;">
+      <label>Subject</label>
+      <select name="subject_id">
+        <option value="">-- Select Subject --</option>
+        {% for s in data.subjects %}
+        <option value="{{ s.id }}" {% if data.selected_subject == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0;">
+      <label>Month</label>
+      <input type="month" name="month" value="{{ data.selected_month }}">
+    </div>
+    <div style="padding-top:18px;">
+      <button type="submit" class="btn btn-primary">Generate</button>
+    </div>
+    {% if data.selected_subject %}
+    <div style="padding-top:18px;">
+      <a href="/teacher/export_csv?subject_id={{ data.selected_subject }}&month={{ data.selected_month }}" class="btn btn-outline">⬇ Export CSV</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+{% if data.report is defined %}
+<div class="grid-2 mb-6">
+  <div class="card">
+    <div class="card-title">📅 Daily Attendance</div>
+    <div class="chart-box">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏆 Top Attendance</div>
+    <div style="max-height:220px; overflow-y:auto;">
+      {% for r in data.report[:5] %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:500; font-size:14px;">{{ r.full_name }}</div>
+          <div style="font-size:12px; color:var(--muted);">{{ r.roll_no }}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:600; font-size:16px; color:{% if r.pct >= 75 %}#34d399{% elif r.pct >= 50 %}#fbbf24{% else %}#fb7185{% endif %}">{{ r.pct }}%</div>
+          <div style="font-size:11px; color:var(--muted);">{{ r.present }}/{{ r.total }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="flex justify-between items-center mb-4">
+    <div class="card-title" style="margin-bottom:0;">Student-wise Report</div>
+    <div style="font-size:13px; color:var(--muted);">{{ data.report | length }} students</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Student</th><th>Roll No</th><th>Present</th><th>Absent</th><th>Total</th><th>%</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in data.report %}
+        <tr>
+          <td><strong>{{ r.full_name }}</strong></td>
+          <td><span class="badge badge-info">{{ r.roll_no }}</span></td>
+          <td style="color:#34d399;">{{ r.present }}</td>
+          <td style="color:#fb7185;">{{ r.absent }}</td>
+          <td style="color:var(--muted);">{{ r.total }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="progress" style="width:60px;">
+                <div class="progress-bar" style="width:{{ r.pct }}%;background:{% if r.pct>=75 %}var(--success){% elif r.pct>=50 %}var(--warning){% else %}var(--danger){% endif %};"></div>
+              </div>
+              <span style="font-weight:600; font-size:13px;">{{ r.pct }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if r.pct >= 75 %}
+              <span class="badge badge-present">Good</span>
+            {% elif r.pct >= 50 %}
+              <span class="badge badge-warn">Warning</span>
+            {% else %}
+              <span class="badge badge-absent">Low</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const bCtx = document.getElementById('barChart').getContext('2d');
+new Chart(bCtx, {
+  type: 'bar',
+  data: {
+    labels: {{ data.chart_labels | safe }},
+    datasets: [
+      { label: 'Present', data: {{ data.chart_present | safe }}, backgroundColor: 'rgba(16,185,129,.7)', borderRadius: 4 },
+      { label: 'Absent',  data: {{ data.chart_absent  | safe }}, backgroundColor: 'rgba(244,63,94,.5)',  borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#7b8099', font: { size: 11 } } } },
+    scales: {
+      x: { stacked: true, grid: { color: '#2a2f42' }, ticks: { color: '#7b8099', font: { size: 10 } } },
+      y: { stacked: true, grid: { color: '#2a2f42' }, ticks: { color: '#7b8099', font: { size: 10 } } }
+    }
+  }
+});
+</script>
+{% else %}
+<div style="text-align:center; padding:60px 0; color:var(--muted);">
+  <div style="font-size:48px; margin-bottom:12px;">📋</div>
+  <div style="font-size:16px;">Select a subject and month to generate report</div>
+</div>
+{% endif %}
+{% endblock %}

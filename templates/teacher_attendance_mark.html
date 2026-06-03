@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}My Teacher Attendance — Smart Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">My Teacher Attendance</div>
+  <div class="page-sub">Scan admin QR or enter OTP to mark your attendance.</div>
+</div>
+
+{% if message %}
+  <div class="alert {% if success %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>
+{% endif %}
+
+<div class="grid-2 mb-6">
+  <div class="card">
+    <div class="card-title">Mark Attendance by OTP</div>
+    <form method="POST">
+      <div class="form-group">
+        <label>Enter OTP</label>
+        <input type="text" name="otp" placeholder="6 digit OTP" required>
+      </div>
+      <button class="btn btn-primary" type="submit">Mark My Attendance</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">QR Scan Status</div>
+    {% if token %}
+      <p>QR token received. Attendance result is shown above.</p>
+    {% else %}
+      <p style="color:var(--muted);">Ask admin to generate Teacher Attendance QR. Scan it after login to mark attendance automatically.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">My Recent Teacher Attendance</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Status</th><th>Method</th><th>Marked At</th></tr></thead>
+      <tbody>
+        {% for r in my_records %}
+        <tr>
+          <td>{{ r.date }}</td>
+          <td><span class="badge badge-present">{{ r.status }}</span></td>
+          <td>{{ r.method|upper }}</td>
+          <td>{{ r.marked_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

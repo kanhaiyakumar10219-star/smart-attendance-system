@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Subjects — SmartAttend{% endblock %}
+{% block content %}
+<div class="page-header flex justify-between items-center">
+  <div>
+    <div class="page-title">📚 Subjects</div>
+    <div class="page-sub">Manage your college subjects</div>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('addModal').classList.add('open')">+ Add Subject</button>
+</div>
+
+<div class="grid-3">
+  {% for s in subjects %}
+  <div class="card" style="border-top: 3px solid var(--accent);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px;">{{ s.name }}</div>
+        <div style="font-size:12px; margin-top:2px;">
+          <span class="badge badge-info">{{ s.code }}</span>
+        </div>
+      </div>
+      <span style="font-size:22px;">📖</span>
+    </div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">{{ s.department or '—' }}</div>
+    <div style="font-size:13px; color:var(--muted);">
+      👩‍🏫 {{ s.teacher_name or 'Unassigned' }}
+    </div>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:12px;">
+      <span style="color:var(--muted);">{{ s.enrolled }} records</span>
+      <a href="/teacher/mark_attendance" class="btn btn-success btn-sm">Mark Now</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <div class="modal-title">Add New Subject</div>
+    <form method="POST" action="/teacher/add_subject">
+      <div class="form-group">
+        <label>Subject Name</label>
+        <input type="text" name="name" required placeholder="Data Structures">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Subject Code</label>
+          <input type="text" name="code" required placeholder="CS301">
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" name="department" placeholder="Computer Science">
+        </div>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">Add Subject</button>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

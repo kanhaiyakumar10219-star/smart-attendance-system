@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}Enrolled Students — Smart Attendance{% endblock %}{% block content %}
+<div class="page-header"><div class="page-title">{{ cls.name }} — Enrolled Students</div><div class="page-sub">Code: {{ cls.code }}</div></div>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>GR No</th><th>Roll No</th><th>Department</th><th>Email</th></tr></thead><tbody>{% for s in students %}<tr><td><strong>{{ s.full_name }}</strong></td><td>{{ s.gr_no or '—' }}</td><td>{{ s.roll_no or '—' }}</td><td>{{ s.department or '—' }}</td><td>{{ s.email or '—' }}</td></tr>{% endfor %}</tbody></table></div></div><div class="mt-4"><a href="/admin/classes" class="btn btn-outline">Back</a></div>
+{% endblock %}

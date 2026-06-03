@@ -1,0 +1,51 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# Database files
+*.db
+attendance.db
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build files
+build/
+dist/
+
+# Flask instance folder
+instance/
+
+# Uploaded images (optional)
+uploads/
+
+# Generated QR codes (optional)
+static/qr/
+
+# Excel exports (optional)
+exports/
+reports/

@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block title %}Take Attendance — Smart Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">✅ Take Student Attendance</div>
+  <div class="page-sub">Choose one option: Normal Attendance, Generate OTP, or Generate QR</div>
+</div>
+
+{% if message %}
+<div class="alert alert-success">✔ {{ message }}</div>
+{% endif %}
+
+<div class="card mb-6">
+  <div class="card-title">Select Class / Subject</div>
+  <div class="grid-3">
+    <div class="form-group">
+      <label>Subject</label>
+      <select id="subject-select">
+        <option value="">-- Select Subject --</option>
+        {% for s in subjects %}
+        <option value="{{ s.id }}" {% if selected_subject == s.id|string %}selected{% endif %}>{{ s.name }} ({{ s.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="date-select" value="{{ today }}">
+    </div>
+    <div class="form-group">
+      <label>OTP/QR Valid Time (minutes)</label>
+      <input type="number" id="expires-minutes" value="30" min="1" max="180">
+    </div>
+  </div>
+</div>
+
+<div class="grid-3 mb-6">
+  <div class="card" style="text-align:center;">
+    <div style="font-size:38px;">📝</div>
+    <div class="card-title">Normal Attendance</div>
+    <p style="color:var(--muted);font-size:13px;min-height:38px;">Teacher manually marks students present/absent.</p>
+    <button class="btn btn-primary" onclick="loadStudents()">Open Normal Attendance</button>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:38px;">🔢</div>
+    <div class="card-title">Generate OTP</div>
+    <p style="color:var(--muted);font-size:13px;min-height:38px;">Show OTP to students for current class.</p>
+    <button class="btn btn-success" onclick="generateSession('otp')">Generate OTP</button>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:38px;">📱</div>
+    <div class="card-title">Generate QR</div>
+    <p style="color:var(--muted);font-size:13px;min-height:38px;">Students scan QR to mark present.</p>
+    <button class="btn btn-outline" onclick="generateSession('qr')">Generate QR</button>
+  </div>
+</div>
+
+<div id="sessionResult" class="card mb-6" style="display:none;text-align:center;">
+  <div class="card-title" id="sessionTitle">Attendance Session</div>
+  <div id="otpBox" style="display:none;">
+    <div style="font-size:14px;color:var(--muted);">Attendance OTP</div>
+    <div style="font-size:40px;font-weight:800;letter-spacing:6px;margin:10px 0;" id="otp-code"></div>
+  </div>
+  <div id="qrBox" style="display:none;">
+    <img id="qr-img" src="" alt="QR Code" style="max-width:230px;border-radius:16px;background:white;padding:10px;">
+  </div>
+  <p style="font-size:13px;color:var(--muted);margin-top:10px;">Valid for <span id="valid-minutes-label">30</span> minutes. Students need teacher-generated OTP/QR.</p>
+  <div style="font-size:11px;color:var(--muted);word-break:break-all;" id="mark-url"></div>
+</div>
+
+<form method="POST" id="attendForm" action="/teacher/mark_attendance" style="display:none;">
+  <input type="hidden" name="subject_id" id="form-subject">
+  <input type="hidden" name="date" id="form-date">
+
+  <div class="card">
+    <div class="flex justify-between items-center mb-4">
+      <div class="card-title" style="margin-bottom:0;">Normal Attendance - Students</div>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-success btn-sm" onclick="markAll(true)">✔ All Present</button>
+        <button type="button" class="btn btn-danger  btn-sm" onclick="markAll(false)">✘ All Absent</button>
+      </div>
+    </div>
+
+    <div id="summary" style="margin-bottom:16px; font-size:13px; color:var(--muted);"></div>
+    <div class="attend-grid" id="students-grid"></div>
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">💾 Save Attendance</button>
+    </div>
+  </div>
+</form>
+
+<script>
+let studentData = [];
+
+function selectedSubjectId() {
+  const subjectId = document.getElementById('subject-select').value;
+  if (!subjectId) { alert('Select a subject first'); return null; }
+  return subjectId;
+}
+
+async function generateSession(type) {
+  const subjectId = selectedSubjectId();
+  if (!subjectId) return;
+  const minutesInput = document.getElementById('expires-minutes');
+  let expiresMinutes = parseInt(minutesInput.value || '30', 10);
+  if (isNaN(expiresMinutes) || expiresMinutes < 1) expiresMinutes = 30;
+  if (expiresMinutes > 180) expiresMinutes = 180;
+  minutesInput.value = expiresMinutes;
+
+  const res = await fetch(`/teacher/generate_qr/${subjectId}?expires_minutes=${expiresMinutes}`);
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+
+  document.getElementById('sessionResult').style.display = 'block';
+  document.getElementById('sessionTitle').textContent = type === 'otp' ? '🔢 Generated OTP' : '📱 Generated QR';
+  document.getElementById('valid-minutes-label').textContent = data.expires_minutes || expiresMinutes;
+  document.getElementById('otp-code').textContent = data.otp;
+  document.getElementById('qr-img').src = 'data:image/png;base64,' + data.qr_image;
+  document.getElementById('mark-url').textContent = data.mark_url;
+  document.getElementById('otpBox').style.display = type === 'otp' ? 'block' : 'none';
+  document.getElementById('qrBox').style.display = type === 'qr' ? 'block' : 'none';
+  document.getElementById('attendForm').style.display = 'none';
+}
+
+async function loadStudents() {
+  const subjectId = selectedSubjectId();
+  const date = document.getElementById('date-select').value;
+  if (!subjectId) return;
+
+  const res = await fetch(`/api/students_for_subject/${subjectId}?date=${date}`);
+  studentData = await res.json();
+
+  document.getElementById('form-subject').value = subjectId;
+  document.getElementById('form-date').value = date;
+  document.getElementById('sessionResult').style.display = 'none';
+
+  renderStudents();
+  document.getElementById('attendForm').style.display = 'block';
+}
+
+function renderStudents() {
+  const grid = document.getElementById('students-grid');
+  grid.innerHTML = '';
+  studentData.forEach(s => {
+    const isPresent = s.status === 'present';
+    const card = document.createElement('div');
+    card.className = `attend-card ${isPresent ? 'present' : 'absent'}`;
+    card.dataset.id = s.id;
+    card.innerHTML = `
+      <div class="attend-dot"></div>
+      <div>
+        <div style="font-size:14px;font-weight:500;">${s.full_name}</div>
+        <div style="font-size:11px;color:var(--muted);">${s.roll_no || ''}</div>
+      </div>
+      <input type="hidden" name="student_ids" value="${s.id}">
+      ${isPresent ? `<input type="hidden" name="present_ids" value="${s.id}" id="p${s.id}">` : ''}
+    `;
+    card.onclick = () => toggleStudent(card, s.id);
+    grid.appendChild(card);
+  });
+  updateSummary();
+}
+
+function toggleStudent(card, id) {
+  const isPresent = card.classList.contains('present');
+  card.classList.toggle('present', !isPresent);
+  card.classList.toggle('absent', isPresent);
+  let existing = document.getElementById('p' + id);
+  if (!isPresent) {
+    if (!existing) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'present_ids'; inp.value = id; inp.id = 'p' + id;
+      card.appendChild(inp);
+    }
+  } else if (existing) existing.remove();
+  updateSummary();
+}
+
+function markAll(present) {
+  document.querySelectorAll('.attend-card').forEach(card => {
+    const id = card.dataset.id;
+    card.classList.toggle('present', present);
+    card.classList.toggle('absent', !present);
+    let existing = document.getElementById('p' + id);
+    if (present) {
+      if (!existing) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'present_ids'; inp.value = id; inp.id = 'p' + id;
+        card.appendChild(inp);
+      }
+    } else if (existing) existing.remove();
+  });
+  updateSummary();
+}
+
+function updateSummary() {
+  const total = document.querySelectorAll('.attend-card').length;
+  const present = document.querySelectorAll('.attend-card.present').length;
+  document.getElementById('summary').textContent = `${present} present / ${total - present} absent out of ${total} students`;
+}
+</script>
+{% endblock %}

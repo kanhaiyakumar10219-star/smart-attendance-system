@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Smart Attendance{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14;
+    --surface: #161921;
+    --surface2: #1e2130;
+    --border: #2a2f42;
+    --accent: #6366f1;
+    --accent2: #22d3ee;
+    --success: #10b981;
+    --danger: #f43f5e;
+    --warning: #f59e0b;
+    --text: #e8eaf0;
+    --muted: #7b8099;
+    --font: 'DM Sans', sans-serif;
+    --heading: 'Space Grotesk', sans-serif;
+    --radius: 12px;
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  a { text-decoration: none; color: inherit; }
+
+  /* Sidebar */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 240px; min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); padding: 24px 0;
+    display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+  }
+  .sidebar-logo {
+    font-family: var(--heading); font-size: 20px; font-weight: 700;
+    padding: 0 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .sidebar-section { padding: 16px 12px 8px; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .sidebar-nav { flex: 1; padding: 8px 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--muted);
+    border-radius: 0; transition: all .15s; cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(99,102,241,.08); }
+  .nav-item.active { color: var(--accent); background: rgba(99,102,241,.12); border-left-color: var(--accent); }
+  .nav-icon { width: 18px; text-align: center; font-size: 16px; }
+
+  .sidebar-user {
+    margin: 16px 12px 0; padding: 12px 16px;
+    background: var(--surface2); border-radius: var(--radius);
+    border: 1px solid var(--border); font-size: 13px;
+  }
+  .user-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .user-role { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+  .badge-role {
+    display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 6px;
+    background: rgba(99,102,241,.2); color: #a5b4fc;
+  }
+
+  /* Main */
+  .main { margin-left: 240px; flex: 1; padding: 32px; max-width: calc(100vw - 240px); }
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-family: var(--heading); font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { color: var(--muted); font-size: 14px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .card-title { font-family: var(--heading); font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content:''; position: absolute; top:0; left:0; right:0; height: 3px;
+  }
+  .stat-card.purple::before { background: var(--accent); }
+  .stat-card.cyan::before   { background: var(--accent2); }
+  .stat-card.green::before  { background: var(--success); }
+  .stat-card.amber::before  { background: var(--warning); }
+  .stat-value { font-family: var(--heading); font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .stat-label { color: var(--muted); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; border-bottom: 1px solid rgba(42,47,66,.5); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(99,102,241,.04); }
+
+  /* Badge */
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-present { background: rgba(16,185,129,.15); color: #34d399; }
+  .badge-absent  { background: rgba(244,63,94,.15);  color: #fb7185; }
+  .badge-warn    { background: rgba(245,158,11,.15);  color: #fbbf24; }
+  .badge-info    { background: rgba(99,102,241,.15);  color: #a5b4fc; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all .15s; border: none; font-family: var(--font);
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #5254cc; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-danger  { background: rgba(244,63,94,.15); color: #fb7185; border: 1px solid rgba(244,63,94,.3); }
+  .btn-danger:hover { background: rgba(244,63,94,.25); }
+  .btn-success { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; }
+  input[type=text], input[type=email], input[type=password], input[type=date], select, textarea {
+    width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 14px; font-family: var(--font);
+    transition: border-color .15s; outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+
+  /* Grid helpers */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .mb-6 { margin-bottom: 24px; }
+  .mt-4 { margin-top: 16px; }
+
+  /* Modal */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 999; align-items: center; justify-content: center; }
+  .modal.open { display: flex; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; }
+  .modal-title { font-family: var(--heading); font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+
+  /* Alert */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
+  .alert-success { background: rgba(16,185,129,.1); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
+  .alert-danger   { background: rgba(244,63,94,.1);  color: #fb7185;  border: 1px solid rgba(244,63,94,.2);  }
+
+  /* Progress bar */
+  .progress { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 4px; transition: width .3s; }
+
+  /* Attendance checkbox grid */
+  .attend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .attend-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color .15s;
+  }
+  .attend-card.present { border-color: var(--success); background: rgba(16,185,129,.05); }
+  .attend-card.absent  { border-color: var(--danger);  background: rgba(244,63,94,.05);  }
+  .attend-card input { display: none; }
+  .attend-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background .15s; }
+  .attend-card.present .attend-dot { background: var(--success); }
+  .attend-card.absent  .attend-dot { background: var(--danger);  }
+
+  /* Chart containers */
+  .chart-box { position: relative; height: 220px; }
+
+  /* QR container */
+  #qr-container { text-align: center; }
+  #qr-img { width: 200px; height: 200px; border-radius: 12px; margin: 12px auto; display: block; }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; padding: 16px; max-width: 100vw; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+{% if session.user_id %}
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-dot"></span> Smart Attendance
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Main</div>
+    {% if session.role == 'admin' %}
+      <a href="/admin/dashboard" class="nav-item {% if request.path == '/admin/dashboard' %}active{% endif %}"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/admin/teachers" class="nav-item {% if request.path == '/admin/teachers' %}active{% endif %}"><span class="nav-icon">👩‍🏫</span> Teachers</a>
+      <a href="/admin/students" class="nav-item {% if request.path == '/admin/students' %}active{% endif %}"><span class="nav-icon">👨‍🎓</span> Students</a>
+      <a href="/admin/classes" class="nav-item {% if request.path.startswith('/admin/classes') or request.path.startswith('/admin/class') %}active{% endif %}"><span class="nav-icon">📚</span> Classes</a>
+      <a href="/admin/teacher-attendance" class="nav-item {% if request.path.startswith('/admin/teacher-attendance') %}active{% endif %}"><span class="nav-icon">🧑‍🏫</span> Teacher Attendance</a>
+    {% elif session.role == 'teacher' %}
+      <a href="/teacher/dashboard" class="nav-item {% if request.path == '/teacher/dashboard' %}active{% endif %}"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/teacher/mark_attendance" class="nav-item {% if request.path == '/teacher/mark_attendance' %}active{% endif %}"><span class="nav-icon">✅</span> Mark Attendance</a>
+      <a href="/teacher/reports" class="nav-item {% if request.path == '/teacher/reports' %}active{% endif %}"><span class="nav-icon">📊</span> Reports</a>
+    {% else %}
+      <a href="/student/dashboard" class="nav-item {% if request.path == '/student/dashboard' %}active{% endif %}"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/student/otp_attend" class="nav-item {% if request.path == '/student/otp_attend' %}active{% endif %}"><span class="nav-icon">🔢</span> Enter OTP</a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-name">{{ session.full_name }}</div>
+    <div class="user-role">{{ session.role }}</div>
+    <span class="badge-role">{{ session.role }}</span><br>
+    <a href="/logout" class="btn btn-outline btn-sm mt-4" style="width:100%; justify-content:center; margin-top:10px;">Logout</a>
+  </div>
+</aside>
+{% endif %}
+<main class="main">
+  {% block content %}{% endblock %}
+</main>
+</div>
+</body>
+</html>

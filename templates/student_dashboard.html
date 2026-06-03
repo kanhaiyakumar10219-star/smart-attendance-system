@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Smart Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">📋 Student Dashboard</div>
+  <div class="page-sub">View your attendance records across all subjects</div>
+</div>
+<div class="card mb-6">
+  <div class="card-title">👤 Student Profile</div>
+  <div class="grid-3">
+    <div><label>Name</label><strong>{{ profile.full_name }}</strong></div>
+    <div><label>Username</label><strong>{{ profile.username }}</strong></div>
+    <div><label>GR No</label><strong>{{ profile.gr_no or '—' }}</strong></div>
+    <div><label>Roll No</label><strong>{{ profile.roll_no or '—' }}</strong></div>
+    <div><label>Department</label><strong>{{ profile.department or '—' }}</strong></div>
+    <div><label>Email</label><strong>{{ profile.email or '—' }}</strong></div>
+  </div>
+</div>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card purple">
+    <div class="stat-value">{{ data.overall }}%</div>
+    <div class="stat-label">Overall Attendance</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-value">{{ data.pie_present }}</div>
+    <div class="stat-label">Classes Present</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-value">{{ data.pie_absent }}</div>
+    <div class="stat-label">Classes Absent</div>
+  </div>
+  <div class="stat-card cyan">
+    <div class="stat-value">{{ data.subjects | length }}</div>
+    <div class="stat-label">Subjects</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-6">
+  <!-- Donut Chart -->
+  <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <div class="card-title" style="align-self:flex-start;">🥧 Overall Split</div>
+    <div style="width:200px; height:200px; position:relative;">
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Subject-wise -->
+  <div class="card">
+    <div class="card-title">📚 Subject-wise Attendance</div>
+    <div style="max-height:220px; overflow-y:auto;">
+      {% for s in data.subjects %}
+      <div style="margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <div>
+            <span style="font-size:14px; font-weight:500;">{{ s.name }}</span>
+            <span style="font-size:11px; color:var(--muted); margin-left:6px;">{{ s.code }}</span>
+          </div>
+          <span style="font-size:13px; font-weight:600; color:{% if s.pct>=75 %}#34d399{% elif s.pct>=50 %}#fbbf24{% else %}#fb7185{% endif %}">
+            {{ s.pct }}%
+          </span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar" style="width:{{ s.pct }}%;background:{% if s.pct>=75 %}var(--success){% elif s.pct>=50 %}var(--warning){% else %}var(--danger){% endif %};"></div>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:3px;">{{ s.present }} / {{ s.total }} classes attended</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent Records -->
+<div class="card">
+  <div class="card-title">🕐 Recent Records</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Subject</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for r in data.recent %}
+        <tr>
+          <td style="color:var(--muted);">{{ r.date }}</td>
+          <td>{{ r.subject }}</td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.status | upper }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Low Attendance Warning -->
+{% set low = data.subjects | selectattr('pct', 'lt', 75) | list %}
+{% if low %}
+<div class="alert alert-danger mt-4" style="margin-top:16px;">
+  ⚠ Your attendance is below 75% in: {% for s in low %}<strong>{{ s.name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+<script>
+const pCtx = document.getElementById('pieChart').getContext('2d');
+new Chart(pCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Present', 'Absent'],
+    datasets: [{
+      data: [{{ data.pie_present }}, {{ data.pie_absent }}],
+      backgroundColor: ['rgba(16,185,129,.8)', 'rgba(244,63,94,.6)'],
+      borderWidth: 0, hoverOffset: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '70%',
+    plugins: { legend: { labels: { color: '#7b8099', font: { size: 12 } } } }
+  }
+});
+</script>
+{% endblock %}
